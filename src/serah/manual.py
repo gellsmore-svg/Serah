@@ -18,7 +18,7 @@ from serah.models import (
     TaxonomyEvent,
 )
 from serah.questions import ensure_question
-from serah.taxonomy import CONCEPT_ID_RE, revise_definition
+from serah.taxonomy import CONCEPT_ID_RE, next_sequence, revise_definition
 
 
 def add_concept(
@@ -67,7 +67,22 @@ def add_concept(
             created_at=utc_now(),
         )
     )
-    _taxonomy_event(session, "CONCEPT_PROPOSED", taxonomy_id, {"status": "proposed", "name": name}, day, rationale)
+    _taxonomy_event(
+        session,
+        "CONCEPT_PROPOSED",
+        taxonomy_id,
+        {
+            "status": "proposed",
+            "name": name,
+            "family": family,
+            "definition": definition,
+            "inclusion_guidance": inclusion,
+            "exclusion_guidance": exclusion,
+            "version": 1,
+        },
+        day,
+        rationale,
+    )
     if status == "active":
         concept.status = "active"
         _taxonomy_event(session, "CONCEPT_ACTIVATED", taxonomy_id, {"status": "active"}, day, rationale)
@@ -243,7 +258,7 @@ def _taxonomy_event(session, event_type, concept_id, payload, day, rationale) ->
             rationale=rationale,
             confidence=None,
             processing_run_id=None,
-            sequence=0,
+            sequence=next_sequence(session),
         )
     )
 

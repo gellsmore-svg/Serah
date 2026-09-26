@@ -66,6 +66,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 export const api = {
   experiments: () => get<{ experiments: Experiment[] }>("/api/experiments"),
+  status: () => get<{ observations: Record<string, number> }>("/api/status"),
   concepts: (status?: string) => get<{ concepts: Concept[] }>(`/api/taxonomy${status ? `?status=${status}` : ""}`),
   concept: (id: string) => get<Record<string, unknown>>(`/api/taxonomy/${encodeURIComponent(id)}`),
   models: () =>

@@ -34,8 +34,8 @@ def test_import_is_stable_ordered_and_idempotent():
     assert stored == expected
     second = import_conversations(session, to_chatgpt_export())
     session.commit()
-    assert second["skipped_conversations"] == 1
     assert second["messages"] == 0
+    assert second["new_messages"] == 0
     assert first["warnings"] >= 1
     session.close()
 

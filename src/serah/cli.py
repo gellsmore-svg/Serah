@@ -136,13 +136,15 @@ def replay(
     half_life_hours: float | None = typer.Option(None, "--half-life-hours"),
     decay: str | None = typer.Option(None, "--decay"),
     gain: float | None = typer.Option(None, "--gain"),
+    engines: str | None = typer.Option(None, "--engines", help="Comma-separated engine ids to chart"),
 ) -> None:
     """Replay reservoirs. A new half-life clones the experiment and keeps observations."""
     ensure_database()
     settings = get_settings()
     session = open_session()
     source = session.get(Experiment, experiment) if experiment else _latest(session)
-    if half_life_hours is not None or decay is not None or gain is not None:
+    chosen_engines = [item.strip() for item in engines.split(",") if item.strip()] if engines else None
+    if half_life_hours is not None or decay is not None or gain is not None or chosen_engines:
         if source is None:
             engines = _engines_with_observations(session) or ["mock", "mock_conservative"]
             source_engines = engines
@@ -160,6 +162,8 @@ def replay(
             source_mode = source.core_scoring_mode
             source_name = source.name
             source_hours = source.half_life_hours
+        if chosen_engines:
+            source_engines = chosen_engines
         chosen_hours = half_life_hours if half_life_hours is not None else source_hours
         created = create_experiment(
             session,

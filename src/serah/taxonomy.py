@@ -41,11 +41,28 @@ CONCEPT_ID_RE = re.compile(r"^(emotion|compression)\.[a-z][a-z0-9_]{1,64}$")
 PROMPT_VERSION = "taxonomy_review/v1"
 
 
+def active_ids(session: Session, day: str) -> set[str]:
+    """Concept ids that were active at the end of ``day``, from causal events only."""
+    found = set()
+    for concept_id, row in reconstruct(session, day).items():
+        if concept_id == "_relationships" or not isinstance(row, dict):
+            continue
+        if row.get("status") == "active":
+            found.add(concept_id)
+    return found
+
+
+def next_sequence(session: Session) -> int:
+    session.flush()
+    current = session.scalar(select(func.max(TaxonomyEvent.sequence)))
+    return int(current or 0) + 1
+
+
 def reconstruct(session: Session, day: str) -> dict[str, dict]:
     events = session.scalars(
         select(TaxonomyEvent)
         .where(TaxonomyEvent.effective_on <= day, TaxonomyEvent.causal_mode == "causal")
-        .order_by(TaxonomyEvent.effective_on, TaxonomyEvent.sequence, TaxonomyEvent.id)
+        .order_by(TaxonomyEvent.effective_on, TaxonomyEvent.sequence)
     ).all()
     state: dict[str, dict] = {}
     for event in events:
@@ -78,6 +95,13 @@ def _apply_reconstructed(state: dict[str, dict], event: TaxonomyEvent) -> None:
                 ),
             }
         )
+    elif event.event_type == "CONCEPT_REACTIVATED" and concept_id:
+        current = state.get(concept_id, {"id": concept_id})
+        current.update(payload)
+        current["status"] = "active"
+        state[concept_id] = current
+    elif event.event_type == "CONCEPT_SPLIT":
+        return
     elif event.event_type == "CONCEPT_DEPRECATED" and concept_id and concept_id in state:
         state[concept_id]["status"] = payload.get("status", "deprecated")
     elif event.event_type == "CONCEPT_MERGED" and concept_id and concept_id in state:
@@ -207,18 +231,18 @@ def apply_review(
     known_episode_ids = {episode.id for episode in episodes}
     stats = {"relevant": 0, "proposed": 0, "activated": 0, "suggestions": 0}
     sequence = 0
+    active_then = active_ids(session, day)
     for item in review.relevant:
         if item.episode_id not in known_episode_ids:
             continue
-        concept = session.get(TaxonomyConcept, item.concept_id)
-        if concept is None or concept.status != "active":
+        if item.concept_id not in active_then:
             continue
         _add_relevance(session, item.episode_id, item.concept_id, day, item.rationale)
         stats["relevant"] += 1
     proposals = review.proposals[: settings.max_proposals_per_day]
     for proposal in proposals:
         sequence = _apply_proposal(
-            session, day, proposal, known_episode_ids, settings, run_id, actor, model_id, sequence, stats
+            session, day, proposal, known_episode_ids, settings, run_id, actor, model_id, sequence, stats, active_then
         )
     for suggestion in review.definition_suggestions:
         sequence = _apply_suggestion(
@@ -245,7 +269,7 @@ def apply_review(
 
 
 def _apply_proposal(
-    session, day, proposal: ConceptProposal, known_ids, settings, run_id, actor, model_id, sequence, stats
+    session, day, proposal: ConceptProposal, known_ids, settings, run_id, actor, model_id, sequence, stats, active_then
 ) -> int:
     if not CONCEPT_ID_RE.match(proposal.taxonomy_id):
         return sequence
@@ -332,6 +356,7 @@ def _apply_proposal(
     concept.confidence = proposal.confidence
     if concept.locked:
         return sequence
+    activated_now = False
     if concept.status in {"proposed", "candidate", "dormant"} and concept.support_count >= settings.active_days:
         concept.status = "active"
         sequence += 1
@@ -349,6 +374,7 @@ def _apply_proposal(
             sequence,
         )
         stats["activated"] += 1
+        activated_now = True
         for target in proposal.nearest_concept_ids:
             if session.get(TaxonomyConcept, target) is None:
                 continue
@@ -382,7 +408,7 @@ def _apply_proposal(
             run_id,
             sequence,
         )
-    if concept.status == "active":
+    if concept.status == "active" and (activated_now or concept.id in active_then):
         for episode_id in support_ids:
             _add_relevance(session, episode_id, concept.id, day, proposal.rationale)
     return sequence
@@ -603,6 +629,6 @@ def _event(
             rationale=rationale or "",
             confidence=confidence,
             processing_run_id=run_id,
-            sequence=sequence,
+            sequence=next_sequence(session),
         )
     )

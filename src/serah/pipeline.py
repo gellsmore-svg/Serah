@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -71,9 +72,15 @@ def run_taxonomy(session: Session, settings: Settings | None = None) -> dict:
     stats = {"days": 0, "skipped": 0, "proposed": 0, "activated": 0}
     try:
         for day in sorted(by_day):
-            if _marked(session, "taxonomy", day):
+            key = _taxonomy_key(day, by_day[day])
+            if _marked(session, "taxonomy", key):
                 stats["skipped"] += 1
                 continue
+            later = session.scalars(select(StageMark).where(StageMark.stage == "taxonomy")).all()
+            for mark in later:
+                if mark.key.split(":", 1)[0] > day:
+                    session.delete(mark)
+            session.flush()
             review = review_day(session, day, by_day[day], settings)
             applied = apply_review(
                 session,
@@ -86,7 +93,7 @@ def run_taxonomy(session: Session, settings: Settings | None = None) -> dict:
                 model_id=settings.llm_model if settings.curator == "llm" else "mock-curator-1",
             )
             session.add(
-                StageMark(id=new_id(), stage="taxonomy", key=day, run_id=run.id, created_at=utc_now())
+                StageMark(id=new_id(), stage="taxonomy", key=key, run_id=run.id, created_at=utc_now())
             )
             stats["days"] += 1
             stats["proposed"] += applied["proposed"]
@@ -271,6 +278,11 @@ def _count(session: Session, table: str) -> int:
     }
     model = mapping[table]
     return int(session.scalar(select(func.count()).select_from(model)) or 0)
+
+
+def _taxonomy_key(day: str, episodes: list[Episode]) -> str:
+    digest = hashlib.sha256("\n".join(sorted(episode.id for episode in episodes)).encode()).hexdigest()[:16]
+    return f"{day}:{digest}"
 
 
 def _episode_day(episode: Episode) -> str:

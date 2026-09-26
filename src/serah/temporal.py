@@ -113,8 +113,20 @@ def replay_concept(
 
     level: float | None = None
     last_time: datetime | None = None
+    anchor_level: float | None = None
+    anchor_time: datetime | None = None
     snapshots: list[DaySnapshot] = []
     events: list[ReservoirEvent] = []
+
+    def decayed_at(moment: datetime) -> tuple[float, float]:
+        """Return (level at moment, hours since the previous clock)."""
+        assert level is not None and last_time is not None
+        delta = hours_between(last_time, moment)
+        if decay_type == "linear":
+            assert anchor_level is not None and anchor_time is not None
+            return apply_decay(anchor_level, hours_between(anchor_time, moment), "linear", half_life_hours), delta
+        return apply_decay(level, delta, decay_type, half_life_hours), delta
+
     day = day_from
     while day <= day_to:
         midnight = end_of_day(day)
@@ -135,9 +147,10 @@ def replay_concept(
                     )
                     level = updated
                     last_time = item.at
+                    anchor_level = updated
+                    anchor_time = item.at
                 else:
-                    delta = hours_between(last_time, item.at)
-                    decayed = apply_decay(level, delta, decay_type, half_life_hours)
+                    decayed, delta = decayed_at(item.at)
                     if delta > 0:
                         events.append(
                             ReservoirEvent(
@@ -154,9 +167,10 @@ def replay_concept(
                     )
                     level = updated
                     last_time = item.at
+                    anchor_level = updated
+                    anchor_time = item.at
         assert level is not None and last_time is not None
-        delta = hours_between(last_time, midnight)
-        decayed = apply_decay(level, delta, decay_type, half_life_hours)
+        decayed, delta = decayed_at(midnight)
         if delta > 0:
             events.append(
                 ReservoirEvent(

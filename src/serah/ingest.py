@@ -121,6 +121,8 @@ def import_conversations(session: Session, documents: list[dict], extra_warnings
         "messages": 0,
         "skipped_conversations": 0,
         "skipped_messages": 0,
+        "new_messages": 0,
+        "updated_conversations": 0,
         "warnings": 0,
     }
     for warning in extra_warnings or []:
@@ -158,23 +160,26 @@ def _import_one(session: Session, document: dict, batch_id: str, now: str, stats
             Conversation.external_id == external_id,
         )
     )
-    if existing is not None:
-        stats["skipped_conversations"] += 1
-        return
     created = _iso(document.get("create_time"))
     title = document.get("title") if isinstance(document.get("title"), str) else ""
-    session.add(
-        Conversation(
-            id=conversation_id,
-            source_type="chatgpt",
-            external_id=external_id,
-            title=title,
-            created_at=created,
-            imported_at=now,
-            source_metadata={"update_time": document.get("update_time")},
+    if existing is not None:
+        conversation_id = existing.id
+        existing.title = title or existing.title
+        existing.source_metadata = {"update_time": document.get("update_time")}
+        stats["updated_conversations"] += 1
+    else:
+        session.add(
+            Conversation(
+                id=conversation_id,
+                source_type="chatgpt",
+                external_id=external_id,
+                title=title,
+                created_at=created,
+                imported_at=now,
+                source_metadata={"update_time": document.get("update_time")},
+            )
         )
-    )
-    stats["conversations"] += 1
+        stats["conversations"] += 1
     current_ids = _current_branch(
         mapping, document.get("current_node") if isinstance(document.get("current_node"), str) else None
     )
@@ -199,6 +204,7 @@ def _import_one(session: Session, document: dict, batch_id: str, now: str, stats
             stamp_value = 0.0
         return (stamp_value, item[0])
 
+    seen_external_ids: set[str] = set()
     for node_id, node in sorted(nodes, key=sort_key):
         message = node.get("message")
         if not isinstance(message, dict):
@@ -228,6 +234,7 @@ def _import_one(session: Session, document: dict, batch_id: str, now: str, stats
             if timestamp is None:
                 stats["skipped_messages"] += 1
                 continue
+        seen_external_ids.add(str(external_message_id))
         already = session.scalar(
             select(Message).where(
                 Message.conversation_id == conversation_id,
@@ -235,6 +242,7 @@ def _import_one(session: Session, document: dict, batch_id: str, now: str, stats
             )
         )
         if already is not None:
+            already.on_current_branch = node_id in current_ids
             stats["skipped_messages"] += 1
             continue
         parent = node.get("parent") if isinstance(node.get("parent"), str) else None
@@ -254,3 +262,11 @@ def _import_one(session: Session, document: dict, batch_id: str, now: str, stats
         )
         ordinal += 1
         stats["messages"] += 1
+        stats["new_messages"] += 1
+    if existing is not None:
+        stored_ids = set(
+            session.scalars(select(Message.external_id).where(Message.conversation_id == conversation_id)).all()
+        )
+        for missing in sorted(stored_ids - seen_external_ids):
+            _warn(session, batch_id, missing, "previously stored message is absent from the new export", now)
+            stats["warnings"] += 1

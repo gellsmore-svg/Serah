@@ -26,6 +26,12 @@ Distributions with a negative mass, or a sum more than 0.02 away from 1, are rej
 
 `LayaDecisionEngine` imports `laya` and calls `Router.predict_batch`. Status checks the import only. Weights load on the first score, which also downloads a checkpoint on a cold machine. Serah's tests do not do that. Optional install: `pip install -e ".[laya]"`. `LAYA_DEVICE` and `LAYA_CHECKPOINT` are forwarded when set. This matches Laya 0.3.20 and the adapter shape already used by Keziah.
 
+System-1 engines receive the user evidence as a plain string. Assistant context and the measurement instructions stay out of that state. The question text still carries the evidence rule. The LLM baseline is the exception: it is a language model, so it receives the user text and the context separately.
+
+## Keziah
+
+`keziah` sends the measurement to a running Keziah server. Set `SERAH_KEZIAH_BASE_URL` (for example `http://127.0.0.1:8766`) and optionally `SERAH_KEZIAH_MODEL` (default `mock`) and `SERAH_KEZIAH_API_KEY`. Serah posts `{model, state, questions, timeout_s, client_id}` to `/v1/systemone`. `state` is the user text only. Answers are read from the job result's `response.answers` and translated like any other System-1 score. If the `keziah` package imports, Serah uses `keziah.Client`. Otherwise it uses the same JSON over HTTP. An unset URL leaves the engine `NOT_CONFIGURED` and does not stop the rest of Serah.
+
 ## Jev
 
 `SystemOneHttpEngine` posts `{"model", "state", "questions"}` to `{JEV_BASE_URL}/v1/systemone`, default host `https://api.typesafe.ai`, model `jev-latest`. The bearer token is read from `TYPESAFE_API_KEY`, then `JEV_API_KEY`. No key means `NOT_CONFIGURED`. Status does not call the network. A score run without a key raises and writes no observations.

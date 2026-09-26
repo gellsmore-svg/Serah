@@ -12,7 +12,13 @@ Exponential:
 R = R_previous × 0.5^(Δt / half_life)
 ```
 
-Linear, included for comparison: the level is halved at one half-life and reaches 0 at two.
+Linear, included for comparison, is measured from the level just after the latest activation. At time t after that anchor, with half-life H:
+
+```
+R = anchor × max(0, 1 − 0.5 × (t − t_anchor) / H)
+```
+
+It is halved at one half-life and reaches 0 at two, however many midnights fall in between.
 
 `none` leaves the level unchanged.
 

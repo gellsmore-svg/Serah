@@ -21,7 +21,8 @@ class MockDecisionEngine:
         return EngineStatus(self.engine_id, self.display_name, "AVAILABLE", "mock", "deterministic local instrument")
 
     def evaluate(self, request: DecisionRequest) -> DecisionResult:
-        text = str(request.state.get("user_evidence") or "")
+        state = request.state
+        text = state if isinstance(state, str) else str((state or {}).get("user_evidence") or "")
         if request.concept_id == "compression.obligation_pressure":
             intensity = 78.0 if obligation_marker_count(text) >= 3 else 6.0
         else:

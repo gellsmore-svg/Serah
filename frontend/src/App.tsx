@@ -514,12 +514,14 @@ function Settings({
   const [gain, setGain] = useState(experiment?.activation_gain ?? 0.35);
   const [engines, setEngines] = useState<string[]>(experiment?.engines ?? ["mock", "mock_conservative"]);
   const [models, setModels] = useState<{ engine_id: string; availability: string; detail: string }[]>([]);
+  const [observedEngines, setObservedEngines] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [day, setDay] = useState("2024-03-03");
   const [annotation, setAnnotation] = useState("");
 
   useEffect(() => {
     api.models().then((body) => setModels(body.engines)).catch(() => setModels([]));
+    api.status().then((body) => setObservedEngines(Object.keys(body.observations || {}))).catch(() => setObservedEngines([]));
   }, []);
 
   async function replay() {
@@ -567,7 +569,7 @@ function Settings({
         </label>
       </div>
       <div className="row">
-        {(experiment?.engines || engines).map((engine) => (
+        {Array.from(new Set([...(experiment?.engines || []), ...observedEngines, ...engines])).map((engine) => (
           <label key={engine}>
             <input
               type="checkbox"

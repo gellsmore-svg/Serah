@@ -68,6 +68,8 @@ def fingerprint_for(engine_id: str, settings: Settings) -> str:
         return f"model:{settings.kai_model}|url:{settings.kai_base_url}"
     if engine_id == "decider":
         return f"model:{settings.decider_model}|url:{settings.decider_base_url}"
+    if engine_id == "keziah":
+        return f"model:{settings.keziah_model}|url:{settings.keziah_base_url}"
     if engine_id == "llm_baseline":
         return f"model:{settings.llm_model}|url:{settings.llm_base_url}"
     return engine_id
@@ -89,8 +91,6 @@ def score_engine(
         select(Episode).where(Episode.excluded.is_(False)).order_by(Episode.timestamp_start, Episode.id)
     ).all()
     fingerprint = fingerprint_for(engine.engine_id, settings)
-    pending: list[DecisionRequest] = []
-    cached_results: list[tuple[DecisionRequest, dict]] = []
     stats = {"scored": 0, "cached": 0, "skipped": 0, "failed": 0}
     for episode in episodes:
         for concept_id in _targets(session, episode, mode):
@@ -145,14 +145,7 @@ def score_engine(
                 concept_id=concept_id,
                 concept_version=version.version,
                 question_version=question.version,
-                state={
-                    "user_evidence": episode.user_text,
-                    "context": episode.context_text,
-                    "evidence_rule": (
-                        "Judge only user_evidence. Context may explain what the user is answering. "
-                        "Do not score an assistant interpretation unless the user endorses it."
-                    ),
-                },
+                state=_engine_state(engine.engine_id, episode),
                 questions={
                     concept_id: {
                         "type": "score",
@@ -165,22 +158,21 @@ def score_engine(
             )
             cached = session.get(InferenceCache, key_hash)
             if cached is not None:
-                cached_results.append((request, cached.result))
-            else:
-                pending.append(request)
-    for request, result_payload in cached_results:
-        _store_observation(session, request, _result_from_cache(request, result_payload), run_id, mode, cache_hit=True)
-        stats["cached"] += 1
-        stats["scored"] += 1
-    if pending:
-        try:
-            fresh = engine.evaluate_batch(pending)
-        except EngineUnavailable:
-            raise
-        except EngineError:
-            stats["failed"] += len(pending)
-            raise
-        for request, result in zip(pending, fresh, strict=True):
+                _store_observation(
+                    session, request, _result_from_cache(request, cached.result), run_id, mode, cache_hit=True
+                )
+                stats["cached"] += 1
+                stats["scored"] += 1
+                session.commit()
+                continue
+            try:
+                result = engine.evaluate_batch([request])[0]
+            except EngineUnavailable:
+                raise
+            except EngineError:
+                stats["failed"] += 1
+                session.commit()
+                raise
             session.add(
                 InferenceCache(
                     request_hash=request.cache_key,
@@ -193,24 +185,45 @@ def score_engine(
             )
             _store_observation(session, request, result, run_id, mode, cache_hit=False)
             stats["scored"] += 1
+            session.commit()
     return stats
 
 
+def _engine_state(engine_id: str, episode: Episode):
+    """System-1 models score the user text alone. The LLM baseline may see context."""
+    if engine_id == "llm_baseline":
+        return {
+            "user_evidence": episode.user_text,
+            "context": episode.context_text,
+            "evidence_rule": (
+                "Judge only user_evidence. Context may explain what the user is answering. "
+                "Do not score an assistant interpretation unless the user endorses it."
+            ),
+        }
+    return episode.user_text
+
+
 def _targets(session: Session, episode: Episode, mode: str) -> list[str]:
-    relevant = session.scalars(
-        select(EpisodeRelevance.concept_id).where(EpisodeRelevance.episode_id == episode.id)
-    ).all()
-    active = {
-        concept.id
-        for concept in session.scalars(select(TaxonomyConcept).where(TaxonomyConcept.status == "active")).all()
-    }
-    relevant = [concept_id for concept_id in relevant if concept_id in active]
+    from serah.taxonomy import active_ids
+
+    day = _episode_day(episode)
+    active = active_ids(session, day)
+    relevant = [
+        concept_id
+        for concept_id in session.scalars(
+            select(EpisodeRelevance.concept_id).where(EpisodeRelevance.episode_id == episode.id)
+        ).all()
+        if concept_id in active
+    ]
     if mode == "relevant":
         return sorted(set(relevant))
-    locked = session.scalars(
-        select(TaxonomyConcept.id).where(TaxonomyConcept.locked.is_(True), TaxonomyConcept.status == "active")
-    ).all()
-    return sorted(set(locked) | set(relevant))
+    locked = {
+        concept_id
+        for concept_id in session.scalars(
+            select(TaxonomyConcept.id).where(TaxonomyConcept.locked.is_(True))
+        ).all()
+    }
+    return sorted((locked & active) | set(relevant))
 
 
 def _version_on(session: Session, concept_id: str, day: str) -> TaxonomyConceptVersion | None:

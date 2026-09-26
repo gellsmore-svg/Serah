@@ -7,6 +7,7 @@ import os
 from serah.config import Settings, get_settings
 from serah.engines.base import DecisionEngine, EngineStatus
 from serah.engines.decider_local import DeciderLocalEngine
+from serah.engines.keziah_engine import KeziahDecisionEngine
 from serah.engines.laya import LayaDecisionEngine
 from serah.engines.llm_baseline import LLMBaselineEngine
 from serah.engines.mock import MockDecisionEngine
@@ -58,6 +59,7 @@ def build_engines(settings: Settings | None = None) -> dict[str, DecisionEngine]
         "kai": kai,
         "decider": decider,
         "llm_baseline": LLMBaselineEngine(settings),
+        "keziah": KeziahDecisionEngine(settings),
     }
 
 
