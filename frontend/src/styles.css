@@ -1,0 +1,192 @@
+:root {
+  color: #1e1a16;
+  background: #efe8dc;
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: #1e1a16;
+  color: #faf7f2;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: transparent;
+  color: #1e1a16;
+  border: 1px solid #c9bfb2;
+}
+
+button:disabled { opacity: 0.45; cursor: default; }
+
+.app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+}
+
+.rail {
+  padding: 1.4rem 1.1rem;
+  border-right: 1px solid #d9d0c3;
+  background: #e7dfd2;
+}
+
+.brand {
+  font-family: Palatino, "Iowan Old Style", Georgia, serif;
+  font-size: 2rem;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.brand span {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6d6256;
+}
+
+nav { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 1.6rem; }
+
+nav a {
+  color: inherit;
+  text-decoration: none;
+  padding: 0.35rem 0.2rem;
+  border-bottom: 1px solid transparent;
+}
+
+nav a.active { border-color: #8d3d32; }
+
+.stage { padding: 1.4rem 1.6rem 3rem; max-width: 1100px; }
+
+.kicker {
+  margin: 0 0 0.4rem;
+  color: #6d6256;
+  font-size: 0.82rem;
+}
+
+h1, h2 {
+  font-family: Palatino, Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: 2.1rem; margin: 0 0 0.4rem; }
+
+.note {
+  max-width: 46rem;
+  color: #4d453d;
+}
+
+.controls, .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1rem;
+  align-items: end;
+  margin: 1rem 0;
+}
+
+label { display: grid; gap: 0.25rem; font-size: 0.82rem; color: #5c534b; }
+
+select, input, textarea {
+  background: #faf7f2;
+  border: 1px solid #d9d0c3;
+  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
+}
+
+.card {
+  background: #faf7f2;
+  border: 1px solid #e2d9cc;
+  border-radius: 16px;
+  padding: 1rem 1rem 0.6rem;
+}
+
+.chart-wrap { position: relative; }
+
+svg { width: 100%; height: auto; display: block; }
+
+.grid { stroke: #eadfce; stroke-width: 1; }
+
+.tick { fill: #6d6256; font-size: 12px; }
+
+.density { fill: #8d3d32; opacity: 0.13; }
+
+.hover-line { stroke: #1e1a16; stroke-dasharray: 3 3; opacity: 0.4; }
+
+.tooltip {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: #1e1a16;
+  color: #faf7f2;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+  max-width: 260px;
+}
+
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; list-style: none; padding: 0.4rem 0 0.8rem; margin: 0; font-size: 0.9rem; }
+
+.legend i { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 99px; margin-right: 0.35rem; }
+
+.bars { display: grid; gap: 0.55rem; }
+
+.bar-row { display: grid; grid-template-columns: 9rem 1fr 3rem; gap: 0.6rem; align-items: center; }
+
+.bar { height: 0.7rem; background: #e7dfd2; border-radius: 99px; overflow: hidden; }
+
+.bar span { display: block; height: 100%; background: #8d3d32; }
+
+.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+.list { display: grid; gap: 0.45rem; }
+
+.list button, .list a.item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #faf7f2;
+  color: inherit;
+  border: 1px solid #e2d9cc;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  text-decoration: none;
+}
+
+.muted { color: #6d6256; }
+
+.error { color: #8d3d32; }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+.quote {
+  font-family: Palatino, Georgia, serif;
+  font-size: 1.25rem;
+  margin: 0.4rem 0;
+}
+
+@media (max-width: 800px) {
+  .app { grid-template-columns: 1fr; }
+  .rail { border-right: 0; border-bottom: 1px solid #d9d0c3; }
+  nav { flex-direction: row; flex-wrap: wrap; }
+  .split, .bar-row { grid-template-columns: 1fr; }
+  .stage { padding: 1rem; }
+}
