@@ -81,6 +81,7 @@ Details, including why the shared score instrument has ten levels rather than el
 - [PRIVACY.md](PRIVACY.md)
 - [DEVELOPMENT.md](DEVELOPMENT.md)
 - [SPEC_REVIEW.md](SPEC_REVIEW.md)
+- [Code and requirements review, 2026-09-26](docs/review-2026-09-26.md): open work items
 
 ## Licence
 
