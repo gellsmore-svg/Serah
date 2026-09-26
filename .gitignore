@@ -1,0 +1,45 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local personal data. The public repository must not contain real history.
+data/*
+!data/README.md
+exports/
+imports/
+private/
+local/
+logs/
+cache/
+checkpoints/
+model-cache/
+models/
+.serah/
+
+*.db
+*.sqlite
+*.sqlite3
+*.jsonl.private
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Editor and OS
+.DS_Store
+*.swp

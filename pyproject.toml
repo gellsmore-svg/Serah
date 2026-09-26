@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "serah"
+version = "0.1.0"
+description = "Longitudinal probabilistic emotional-state observatory with dynamic LLM-curated taxonomies and pluggable System-1 decision engines."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "gellsmore-svg" }]
+keywords = [
+    "probabilistic-ai",
+    "system-1",
+    "emotional-analysis",
+    "longitudinal-analysis",
+    "decision-models",
+    "local-first",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.4",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "typer>=0.12",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+laya = ["laya"]
+
+[project.scripts]
+serah = "serah.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gellsmore-svg/Serah"
+Repository = "https://github.com/gellsmore-svg/Serah"
+Issues = "https://github.com/gellsmore-svg/Serah/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+serah = ["py.typed", "prompts/**/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = [
+    "integration: optional tests that need a configured System-1 model or network",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
