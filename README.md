@@ -6,6 +6,16 @@ Serah keeps five layers apart: the words that were said, the taxonomy used to na
 
 A number on the chart means: given this evidence, this concept definition, this question version, this engine, and this experimental temporal model, the derived intensity is this value on Serah's 0–100 scale. It is not a measurement of a nervous system, and it is not a clinical finding.
 
+## Is it for you?
+
+**Good fit:** you want to study how emotional language in your own
+conversation history moves over time, compare how different scoring engines
+read the same evidence, and see every assumption (taxonomy, question,
+engine, decay) that a chart depends on.
+
+**Not a fit:** anything diagnostic or clinical, or a single score for a
+person. See below.
+
 ## What Serah is not
 
 Serah is not a diagnostic system, a risk score, a happiness score, or a wellness score. It does not reduce a person to one number. It does not treat a model's probability as psychological truth. Assistant text is context. It becomes evidence only when the user's own words endorse it. A day with no observation is not a score of zero.
@@ -50,6 +60,11 @@ The importer accepts a ChatGPT `conversations.json`, a directory of those files,
 
 Real exports stay on the machine that imported them. See [PRIVACY.md](PRIVACY.md).
 
+**Before you serve a real history:** `serah serve` has no authentication and
+currently accepts any `Host` header, which leaves DNS rebinding open (review
+item M2). Keep it on `127.0.0.1`, never bind it to `0.0.0.0`, and stop it when
+you are not using it.
+
 ## Changing the half-life
 
 ```bash
@@ -81,7 +96,7 @@ Details, including why the shared score instrument has ten levels rather than el
 - [PRIVACY.md](PRIVACY.md)
 - [DEVELOPMENT.md](DEVELOPMENT.md)
 - [SPEC_REVIEW.md](SPEC_REVIEW.md)
-- [Code and requirements review, 2026-09-26](docs/review-2026-09-26.md): open work items
+- [Code and requirements review, 2026-09-26](docs/review-2026-09-26.md): the eight high-severity items are fixed; ten medium items (M1–M10) remain open
 
 ## Licence
 
